@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --main-color: #0b7bc8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+    --main-color: #0b7bc8;
+  }
+}
+
+body {
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+.bg-primary {
+  color: #ededed;
+  background-color: var(--main-color) !important;
+}
+
+.bg-main {
+  color: #ededed;
+  background-color: var(--main-color) !important;
+}
+
+.color-main {
+  color: var(--main-color);
+}
+
+.bg-background {
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+.bg-popover {
+  background-color: var(--background);
+}
+
+.text-main-foreground {
+  color: #ededed;
+}
+
+.main-height {
+  min-height: calc(100vh - 80px);
+}
+
+.border-main {
+  border-color: var(--main-color);
+}
+
+.bg-login {
+  background:
+    linear-gradient(135deg, rgba(11, 123, 200, 0.78), rgba(14, 62, 109, 0.78)),
+    url('/login.webp');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  border: 4px solid rgba(11, 123, 200, 0.18);
+  border-top-color: var(--main-color);
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
