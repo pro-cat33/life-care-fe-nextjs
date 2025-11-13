@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { ServiceData } from '@/types/service';
+import { ChangeEvent, useEffect } from 'react';
+import { SelectedService } from '@/types/service';
 import {
   Table,
   TableBody,
@@ -11,148 +11,112 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '@/contexts/AppContext';
-import { InitData } from '@/types/service';
 
 interface AdditionProps {
-  data: ServiceData[];
-  isLoading: boolean;
-  total: number;
+  selectedServices: SelectedService[];
   setTotal: (total: number) => void;
+  setModal: (modal: { flag: boolean, id: string }) => void;
+  onQuantityChange: (serviceId: number, quantity: number) => void;
+  onRemoveService: (serviceId: number) => void;
 }
 
-type ValueKey = 'eat_value' | 'nurse_value' | 'rehearsal_value' | 'pro_value1' | 'pro_value2' | 'pro_value3' | 'transport_value1' | 'transport_value2' | 'staff_value12';
-type PriceKey = 'eat_price' | 'nurse_price' | 'rehearsal_price' | 'pro_price1' | 'pro_price2' | 'pro_price3' | 'transport_price1' | 'transport_price2' | 'staff_price12';
-
-interface CategoryDef {
-  label: string;
-  priceKey: PriceKey;
-  valueKey: ValueKey;
-}
-
-export function Addition({ data, isLoading, total, setTotal }: AdditionProps) {
-  const { initData, setInitData } = useAppContext();
-  const [tempData, setTempData] = useState<InitData>(initData);
-
+export function Addition({
+  selectedServices,
+  setTotal,
+  setModal,
+  onQuantityChange,
+  onRemoveService,
+}: AdditionProps) {
   useEffect(() => {
-    setTempData(initData);
-  }, [initData]);
-
-  const categories: CategoryDef[] = [
-    { label: '食事提供加算', priceKey: 'eat_price', valueKey: 'eat_value' },
-    { label: '常勤看護職員配置加算7', priceKey: 'nurse_price', valueKey: 'nurse_value' },
-    { label: 'リハ加算2', priceKey: 'rehearsal_price', valueKey: 'rehearsal_value' },
-    { label: '福祉専門職配置Ⅰ', priceKey: 'pro_price1', valueKey: 'pro_value1' },
-    { label: '福祉専門職配置Ⅱ', priceKey: 'pro_price2', valueKey: 'pro_value2' },
-    { label: '福祉専門職配置Ⅲ', priceKey: 'pro_price3', valueKey: 'pro_value3' },
-    { label: '送迎加算Ⅰ', priceKey: 'transport_price1', valueKey: 'transport_value1' },
-    { label: '送迎加算重度', priceKey: 'transport_price2', valueKey: 'transport_value2' },
-    { label: '人員配置体制加算Ⅰ2', priceKey: 'staff_price12', valueKey: 'staff_value12' },
-  ];
-
-  const handleYearCountChange = (valueKey: ValueKey, value: string) => {
-    const numeric = parseFloat(value) || 0;
-    setInitData({ ...initData, [valueKey]: numeric });
-  };
-
-  const calculateServicePrice = (compositeUnit: number, yearCount: number): number => {
-    const yearCountNum = Number(yearCount) || 0;
-    return compositeUnit * yearCountNum;
-  };
-
-  const formatPrice = (price: number): string => {
-    return price.toLocaleString('ja-JP');
-  };
-
-  const getTotalServicePrice = () => {
-    return categories.reduce((sum, c) => {
-      const price = Number(tempData[c.priceKey]) || 0;
-      const count = Number(tempData[c.valueKey]) || 0;
-      return sum + calculateServicePrice(price, count);
+    const totalPrice = selectedServices.reduce((sum, service) => {
+      return sum + service.unitPrice * service.quantity;
     }, 0);
+    setTotal(totalPrice);
+  }, [selectedServices, setTotal]);
+
+  const handleQuantityChange = (serviceId: number) => (event: ChangeEvent<HTMLInputElement>) => {
+    const numeric = Math.max(0, Number(event.target.value) || 0);
+    onQuantityChange(serviceId, numeric);
   };
 
-  useEffect(() => {
-    const totalServicePrice = getTotalServicePrice();
-    setTotal(totalServicePrice);
-  }, [tempData, initData]);
-
-  useEffect(() => {
-    setTempData(initData);
-  }, [initData]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-lg text-gray-500">読み込み中...</div>
-      </div>
-    );
-  }
-
-  // if (data.length === 0) {
-  //   return (
-  //     <div className="flex items-center justify-center py-12">
-  //       <div className="text-lg text-gray-500">データがありません</div>
-  //     </div>
-  //   );
-  // }
+  const formatCurrency = (value: number) => `¥${value.toLocaleString('ja-JP')}`;
 
   return (
     <div className='flex flex-col gap-4'>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl md:text-2xl font-bold text-gray-800">加  算</h2>
+        <Button onClick={() => setModal({ flag: true, id: "addition" })}>サービス選択</Button>
       </div>
       <div className="border border-gray-200 rounded-lg overflow-x-auto shadow-sm bg-white">
         <Table className='w-full'>
           <TableHeader className='bg-primary text-white'>
             <TableRow className='hover:bg-transparent'>
-              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>区  分</TableHead>
-              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>合成単位数</TableHead>
-              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>年間のべ数</TableHead>
-              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-2'>サービス価格</TableHead>
+              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>サービス略称</TableHead>
+              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>単  価</TableHead>
+              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>数  量</TableHead>
+              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1'>小  計</TableHead>
+              <TableHead className='text-center font-semibold text-sm md:text-[14px] py-2 md:py-4 px-2 md:px-1 w-24'>削除</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categories.map((c, index) => {
-              const unit = Number(tempData[c.priceKey]) || 0;
-              const count = Number(tempData[c.valueKey]) || 0;
-              const servicePrice = calculateServicePrice(unit, count);
-              return (
-                <TableRow
-                  key={index}
-                  className='hover:bg-blue-50 transition-colors duration-150 cursor-pointer border-b border-gray-100'
-                >
-                  <TableCell className='font-medium text-gray-700 py-2 md:py-3 px-2 md:px-4 text-sm md:text-base'>{c.label}</TableCell>
-                  <TableCell className='text-center text-gray-700 py-2 md:py-3 px-2 md:px-4'>
-                    <span className='font-medium text-sm md:text-base'>{unit}</span>
-                  </TableCell>
-                  <TableCell className='py-2 md:py-3 px-2 md:px-4'>
-                    <Input
-                      type="number"
-                      value={count}
-                      onChange={(e) => handleYearCountChange(c.valueKey, e.target.value)}
-                      className='w-full max-w-24 md:max-w-32 h-8 md:h-9 text-sm md:text-base text-right border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-md transition-all'
-                    />
-                  </TableCell>
-                  <TableCell className='text-right font-bold text-base md:text-lg color-main py-2 md:py-3 px-2 md:px-4'>
-                    <span className="text-xs md:text-base">¥{formatPrice(servicePrice)}</span>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            <TableRow
-              className='hover:bg-blue-50 transition-colors duration-150 cursor-pointer border-b border-gray-100'
-            >
-              <TableCell className='font-medium text-gray-700 py-2 md:py-3 px-2 md:px-4 font-bold'>合計：</TableCell>
-              <TableCell className='text-center text-gray-700 py-2 md:py-3 px-2 md:px-4'>
-              <span className="text-lg md:text-lg font-bold">{categories.reduce((sum, c) => sum + (Number(tempData[c.priceKey]) || 0), 0).toLocaleString('ja-JP')}</span>
-              </TableCell>
-              <TableCell className='py-2 md:py-3 px-2 md:px-4'>
-                <span className="text-lg md:text-lg font-bold">{categories.reduce((sum, c) => sum + (Number(tempData[c.valueKey]) || 0), 0).toLocaleString('ja-JP')}</span>
-              </TableCell>
+            {selectedServices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-gray-500 py-6">
+                  サービスが選択されていません
+                </TableCell>
+              </TableRow>
+            ) : (
+              selectedServices.map(service => {
+                const subtotal = service.unitPrice * service.quantity;
+                return (
+                  <TableRow
+                    key={service.id}
+                    className='hover:bg-blue-50 transition-colors duration-150 border-b border-gray-100'
+                  >
+                    <TableCell className='font-medium text-gray-700 py-2 md:py-3 px-2 md:px-4 text-sm md:text-base'>
+                      {service.short_content || service.service_name}
+                    </TableCell>
+                    <TableCell className='text-center text-gray-700 py-2 md:py-3 px-2 md:px-4'>
+                      {formatCurrency(service.unitPrice)}
+                    </TableCell>
+                    <TableCell className='py-2 md:py-3 px-2 md:px-4'>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={service.quantity}
+                        onChange={handleQuantityChange(service.id)}
+                        className='w-full max-w-24 md:max-w-32 h-8 md:h-9 text-sm md:text-base text-right border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-md transition-all'
+                      />
+                    </TableCell>
+                    <TableCell className='text-right font-bold text-base md:text-lg color-main py-2 md:py-3 px-2 md:px-4'>
+                      <span className="text-xs md:text-base">{formatCurrency(subtotal)}</span>
+                    </TableCell>
+                    <TableCell className='text-center py-2 md:py-3 px-2 md:px-4'>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onRemoveService(service.id)}
+                        className='text-red-500 hover:text-red-600'
+                      >
+                        削除
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+            <TableRow className='border-t border-gray-200'>
+              <TableCell className='font-semibold text-gray-700 py-2 md:py-3 px-2 md:px-4'>合計</TableCell>
+              <TableCell />
+              <TableCell />
               <TableCell className='text-right font-bold text-base md:text-lg color-main py-2 md:py-3 px-2 md:px-4'>
-                <span className="text-lg md:text-lg font-bold">¥{getTotalServicePrice().toLocaleString()}</span>
+                <span className="text-xl md:text-2xl font-bold">
+                  {formatCurrency(
+                    selectedServices.reduce((sum, service) => sum + service.unitPrice * service.quantity, 0)
+                  )}
+                </span>
               </TableCell>
+              <TableCell />
             </TableRow>
           </TableBody>
         </Table>

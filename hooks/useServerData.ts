@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ServiceData } from '@/types/service';
-import { InitData } from '@/types/service';
+import { InitData, SelectedService, SelectedServicesState } from '@/types/service';
 import { SERVER_URL } from '@/config';
 
 interface UseServiceDataResult {
@@ -95,85 +95,162 @@ export function useServiceData(
   return { data, total, isLoading, error, refetch };
 }
 
+const INIT_DATA_KEY = 'living_care_init_data';
+const REG_DATE_KEY = 'living_care_reg_date';
+
+const sanitizeTreatmentBonus = (
+  value: unknown,
+  fallback: [number, number] = [0, 1]
+): [number, number] => {
+  if (Array.isArray(value)) {
+    const first = typeof value[0] === 'number' ? value[0] : fallback[0];
+    const second = typeof value[1] === 'number' ? value[1] : fallback[1];
+    return [first, second];
+  }
+  return fallback;
+};
+
+const DEFAULT_SELECTED_SERVICES: SelectedServicesState = {
+  basic_remuneration: [],
+  addition: [],
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const sanitizeSelectedServiceList = (value: unknown): SelectedService[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+      const candidate = item as Partial<SelectedService>;
+      if (!isFiniteNumber(candidate.id)) {
+        return null;
+      }
+
+      const unitPrice = isFiniteNumber(candidate.unitPrice) ? candidate.unitPrice : 0;
+      const quantity = isFiniteNumber(candidate.quantity) ? candidate.quantity : 1;
+
+      return {
+        ...(candidate as Omit<SelectedService, 'unitPrice' | 'quantity'>),
+        unitPrice,
+        quantity,
+      } as SelectedService;
+    })
+    .filter((item): item is SelectedService => item !== null);
+};
+
+const sanitizeSelectedServices = (
+  value: unknown,
+  fallback: SelectedServicesState = DEFAULT_SELECTED_SERVICES
+): SelectedServicesState => {
+  if (!value || typeof value !== 'object') {
+    return {
+      basic_remuneration: [...fallback.basic_remuneration],
+      addition: [...fallback.addition],
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    basic_remuneration: sanitizeSelectedServiceList(record.basic_remuneration),
+    addition: sanitizeSelectedServiceList(record.addition),
+  };
+};
+
 export function useInitData (reg_date: string) {
   const [initData, setInitData] = useState<InitData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isCancelled = false;
 
-    const fetchData = async () => {
-      if (reg_date === '') {
-        setInitData(null);
-        setIsLoading(false);
-        setError(null);
+    const getStoredInitData = (): InitData | null => {
+      if (typeof window === 'undefined') {
+        return null;
+      }
+      const stored = localStorage.getItem(INIT_DATA_KEY);
+      if (!stored) {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(stored) as Partial<InitData>;
+        if (parsed && typeof parsed === 'object') {
+          const treatment_bonus = sanitizeTreatmentBonus(
+            (parsed as Record<string, unknown>).treatment_bonus,
+            [0, 1]
+          );
+          return {
+            ...(parsed as InitData),
+            treatment_bonus,
+            selected_services: sanitizeSelectedServices(
+              (parsed as Record<string, unknown>).selected_services,
+              DEFAULT_SELECTED_SERVICES
+            ),
+          };
+        }
+      } catch (storageError) {
+        console.warn('Failed to parse initData from localStorage in useInitData.', storageError);
+        localStorage.removeItem(INIT_DATA_KEY);
+      }
+      return null;
+    };
+
+    const hydrateFromStorage = () => {
+      if (isCancelled) {
         return;
       }
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await axios.get(`${SERVER_URL}/init`, {
-          params: { reg_date },
-          signal: controller.signal,
-        });
-
-        const result = response.data as unknown;
-
-        // Handle different response structures
-        let data: InitData;
-        if (
-          typeof result === 'object' &&
-          result !== null &&
-          'initData' in result &&
-          (result as Record<string, unknown>).initData
-        ) {
-          data = (result as { initData: InitData }).initData;
-        } else if (
-          typeof result === 'object' &&
-          result !== null &&
-          'data' in result &&
-          (result as Record<string, unknown>).data
-        ) {
-          data = (result as { data: InitData }).data;
-        } else {
-          // Assume the result itself is the InitData
-          data = result as InitData;
-        }
-        
-        setInitData(data);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          if (err.code === 'ERR_CANCELED') {
-            return;
-          }
-          const status = err.response?.status;
-          if (status === 404) {
-            setInitData(null);
-            setError(null);
-            return;
-          }
-          const message = status
-            ? `HTTP error! status: ${status}`
-            : err.message || 'Unknown error occurred';
-          console.error('useInitData error:', err);
-          setError(message);
-        } else {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-          console.error('useInitData error:', err);
-          setError(errorMessage);
-        }
+      if (reg_date === '') {
         setInitData(null);
-      } finally {
         setIsLoading(false);
+      } else {
+        const storedData = getStoredInitData();
+        if (storedData) {
+          const dataWithRegDate: InitData = {
+            ...storedData,
+            reg_date:
+              storedData.reg_date && storedData.reg_date.trim().length > 0
+                ? storedData.reg_date
+                : reg_date,
+            treatment_bonus: sanitizeTreatmentBonus(storedData.treatment_bonus),
+            selected_services: sanitizeSelectedServices(
+              storedData.selected_services,
+              DEFAULT_SELECTED_SERVICES
+            ),
+          };
+          setInitData(dataWithRegDate);
+        } else {
+          setInitData(null);
+        }
+        setIsLoading(false);
+      }
+      setError(null);
+    };
+
+    hydrateFromStorage();
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === INIT_DATA_KEY) {
+        hydrateFromStorage();
       }
     };
 
-    fetchData();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
+
     return () => {
-      controller.abort();
+      isCancelled = true;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorageChange);
+      }
     };
   }, [reg_date]);
 
@@ -185,12 +262,20 @@ export async function saveInitData(initData: InitData): Promise<{ success: boole
     if (!initData.reg_date) {
       return { success: false, error: '登録日が必須です' };
     }
-
-    await axios.post(`${SERVER_URL}/init`, initData, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    if (typeof window !== 'undefined') {
+      const payload: InitData = {
+        ...initData,
+        treatment_bonus: sanitizeTreatmentBonus(initData.treatment_bonus),
+        selected_services: sanitizeSelectedServices(
+          initData.selected_services,
+          DEFAULT_SELECTED_SERVICES
+        ),
+      };
+      localStorage.setItem(INIT_DATA_KEY, JSON.stringify(payload));
+      if (payload.reg_date && payload.reg_date.trim().length > 0) {
+        localStorage.setItem(REG_DATE_KEY, payload.reg_date);
+      }
+    }
 
     return { success: true };
   } catch (err) {

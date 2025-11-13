@@ -1,11 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/contexts/AppContext";
 import { useInitData } from "@/hooks/useServerData";
-import { InitData } from "@/types/service";
+import { useEffect, useState } from "react";
 
 interface CalculationData {
   capacity: string;
@@ -35,14 +33,17 @@ export default function Home() {
 
   const getAvgBasicUnitPrice = () => {
     const data = fetchedInitData || initData;
-    const valueSum = Number(data.cate_value6 || 0) + Number(data.cate_value5 || 0) + Number(data.cate_value4 || 0) + Number(data.cate_value3 || 0) + Number(data.cate_value2 || 0);
-    const priceSum = Number(data.cate_price6 || 0) * Number(data.cate_value6 || 0) +
-      Number(data.cate_price5 || 0) * Number(data.cate_value5 || 0) +
-      Number(data.cate_price4 || 0) * Number(data.cate_value4 || 0) +
-      Number(data.cate_price3 || 0) * Number(data.cate_value3 || 0) +
-      Number(data.cate_price2 || 0) * Number(data.cate_value2 || 0);
+    const selectedServices = data.selected_services?.basic_remuneration ?? [];
+    const valueSum = selectedServices.reduce((sum, service) => sum + (service.quantity ?? 0), 0);
+    const priceSum = selectedServices.reduce(
+      (sum, service) => sum + (service.unitPrice || 0) * (service.quantity ?? 0),
+      0
+    );
     const countryLevel = Number(data.country_level || 0);
-    return countryLevel > 0 ? (priceSum * countryLevel / valueSum) : 0;
+    if (valueSum <= 0 || countryLevel <= 0) {
+      return 0;
+    }
+    return (priceSum * countryLevel) / valueSum;
   };
 
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main className="w-full bg-gray-100 py-4 md:py-8 px-4 md:px-16 main-height">
+      <main className="w-full bg-gray-100 py-4 md:py-4 px-4 md:px-16 main-height">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 space-y-4 md:space-y-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">

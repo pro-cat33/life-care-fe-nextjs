@@ -49,7 +49,7 @@ export default function Home() {
       <Header />
       <main className="w-full px-2 md:px-4">
         <Searchbar />
-        <ServiceTable data={data} isLoading={isLoading} />
+        <ServiceTable data={data} isLoading={isLoading} modal={{ flag: true, id: "" }} />
         <section className="w-full px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="w-full md:w-auto">
             <TotalCount total={total} />
