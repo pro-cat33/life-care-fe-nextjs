@@ -73,25 +73,25 @@ export function Addition({
                     key={service.id}
                     className='hover:bg-blue-50 transition-colors duration-150 border-b border-gray-100'
                   >
-                    <TableCell className='font-medium text-gray-700 py-2 md:py-3 px-2 md:px-4 text-sm md:text-base'>
+                    <TableCell className='text-gray-700 py-2 md:py-3 px-2 text-[8px] md:text-base'>
                       {service.short_content || service.service_name}
                     </TableCell>
-                    <TableCell className='text-center text-gray-700 py-2 md:py-3 px-2 md:px-4'>
+                    <TableCell className='text-center text-gray-700 py-2 md:py-3 px-2 md:px-4 text-[10px] md:text-base'>
                       {formatCurrency(service.unitPrice)}
                     </TableCell>
-                    <TableCell className='py-2 md:py-3 px-2 md:px-4'>
+                    <TableCell className='py-2 md:py-3 px-2'>
                       <Input
                         type="number"
                         min={0}
                         value={service.quantity}
                         onChange={handleQuantityChange(service.id)}
-                        className='w-full max-w-24 md:max-w-32 h-8 md:h-9 text-sm md:text-base text-right border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-md transition-all'
+                        className='w-full h-8 md:h-9 text-sm md:text-base text-right border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-md transition-all'
                       />
                     </TableCell>
-                    <TableCell className='text-right font-bold text-base md:text-lg color-main py-2 md:py-3 px-2 md:px-4'>
+                    <TableCell className='text-right font-bold text-base md:text-lg color-main py-2 md:py-3 px-1'>
                       <span className="text-xs md:text-base">{formatCurrency(subtotal)}</span>
                     </TableCell>
-                    <TableCell className='text-center py-2 md:py-3 px-2 md:px-4'>
+                    <TableCell className='text-center py-2 md:py-3 px-2'>
                       <Button
                         variant="destructive"
                         size="sm"

@@ -59,7 +59,7 @@ export function ServiceTable({
     .filter(Boolean)
     .join(' ');
 
-  const scrollClass = ['overflow-x-auto', 'overflow-y-auto', bodyMaxHeight ? 'h-full' : 'max-h-[calc(100vh-220px)]']
+  const scrollClass = ['overflow-x-auto', 'overflow-y-auto', bodyMaxHeight ? 'h-full' : 'max-h-[calc(100vh-250px)]']
     .filter(Boolean)
     .join(' ');
 

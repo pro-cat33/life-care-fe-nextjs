@@ -9,6 +9,7 @@ import { TotalCount } from "@/components/TotalCount";
 import Searchbar from "@/components/Searchbar";
 import { Button } from "./ui/button";
 import { ServiceData } from "@/types/service";
+import { FaXmark } from "react-icons/fa6";
 
 interface ServiceModalProps {
   modal: { flag: boolean; id: string };
@@ -90,7 +91,7 @@ export default function ServiceModal({ modal, onClose, onSave, selectedServices 
     <div className="w-screen h-screen fixed top-0 left-0 bg-black/50 z-1">
       <div className="w-screen h-screen fixed top-0 left-0 bg-black/50 z-1" onClick={onClose}></div>
       <main className="w-[92vw] max-w-6xl h-[90vh] md:h-[85vh] px-0 md:px-2 py-6 md:py-8 z-2 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg flex flex-col overflow-hidden relative">
-        <Button onClick={onClose} className="absolute top-3 right-4 bg-red-500 text-white hover:bg-red-600">X</Button>
+        <Button onClick={onClose} className="absolute top-1 right-1 bg-transparent text-xl hover:text-red-500"><FaXmark /></Button>
         <div className="px-4 md:px-6 pb-4 shrink-0">
           <Searchbar />
         </div>
