@@ -259,7 +259,7 @@ export default function Revenue() {
     };
 
     const onSaveLocalStorage = () => {
-
+        const STORAGE_KEY = "revenue_data"
     }
 
     const handleSaveConfirm = () => {
