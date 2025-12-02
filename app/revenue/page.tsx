@@ -258,12 +258,17 @@ export default function Revenue() {
         setShowSaveModal(true);
     };
 
+    const onSaveLocalStorage = () => {
+
+    }
+
     const handleSaveConfirm = () => {
         if (fileName.trim()) {
             handleSaveExcelData(fileName.trim());
         } else {
             handleSaveExcelData();
         }
+        onSaveLocalStorage();
     };
 
     const handleSaveExcelData = async (customFileName?: string) => {
