@@ -14,11 +14,14 @@ export interface ServiceData {
   reduce_percent: number | null;
   big_company: string;
   big_company_percent: number | null;
+  small_company: string;
+  small_company_percent: number | null;
   country_content: string;
   country_percent: number | null;
   no_plan_term: string;
   no_plan_percent: number | null;
   no_doctor: string;
+  no_doctor_percent: number | null;
   work_time: string;
 }
 

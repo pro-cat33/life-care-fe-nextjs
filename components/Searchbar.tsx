@@ -41,7 +41,7 @@ export default function Searchbar() {
         <div className="flex flex-wrap gap-2 md:gap-4">
           <ServiceSelector value={service} onChange={(value: number) => setService(value)} />
           <WorkTimeSelector value={work_time} onChange={(value: number) => setWorkTime(value)} />
-          <MemberNumSelector value={member_num} onChange={(value: number) => setMemberNum(value)} />
+          <MemberNumSelector value={member_num} onChange={(value: string) => setMemberNum(value)} />
           <CategorySelector value={category} onChange={(value:number) => setCategory(value)} />
         </div>
         <div className="flex gap-2 md:gap-4">

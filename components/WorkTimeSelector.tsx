@@ -15,7 +15,7 @@ interface WorkTimeSelectorProps {
 
 export function WorkTimeSelector({ value, onChange }: WorkTimeSelectorProps) {
   const options = [
-    { index: 0, label: "勤務時間"},
+    { index: 0, label: "営業時間"},
     { index: 1, label: ""},
     { index: 2, label: "3時間以上4時間未満" },
     { index: 3, label: "4時間以上5時間未満" },

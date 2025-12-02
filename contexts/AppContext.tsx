@@ -139,8 +139,8 @@ interface AppContextType {
   setService: (service: number) => void;
   work_time: number;
   setWorkTime: (work_time: number) => void;
-  member_num: number;
-  setMemberNum: (member_num: number) => void;
+  member_num: string;
+  setMemberNum: (member_num: string) => void;
   category: number;
   setCategory: (category: number) => void;
   initData: InitData;
@@ -157,7 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [keyword, setKeyword] = useState('');
   const [service, setService] = useState(0);
   const [work_time, setWorkTime] = useState(0);
-  const [member_num, setMemberNum] = useState(0);
+  const [member_num, setMemberNum] = useState('0_0');
   const [category, setCategory] = useState(0);
   
   const [regDate, setRegDateState] = useState<string>(() => getInitialRegDate());

@@ -17,8 +17,9 @@ export default function Home() {
               生活介護サービス費検索システム
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-8 md:mt-12">
-              <Link href="/init">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-8 md:mt-12"> */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 md:gap-6 mt-8 md:mt-12">
+              {/* <Link href="/init">
                 <div className="p-6 md:p-8 bg-main rounded-lg hover:bg-blue-100 transition-colors border border-main">
                   <h2 className="text-lg md:text-xl font-semibold text-white mb-2 md:mb-3">基本設定</h2>
                   <p className="text-xs md:text-sm text-white">基本報酬と加算の入力・計算</p>
@@ -36,6 +37,12 @@ export default function Home() {
                 <div className="p-6 md:p-8 bg-main rounded-lg hover:bg-blue-100 transition-colors border border-main">
                   <h2 className="text-lg md:text-xl font-semibold text-white mb-2 md:mb-3">比較（入力→自動計算）</h2>
                   <p className="text-xs md:text-sm text-white">昨年度・今年度・目標の比較分析</p>
+                </div>
+              </Link> */}
+              <Link href="/revenue">
+                <div className="p-6 md:p-8 bg-main rounded-lg hover:bg-blue-100 transition-colors border border-main">
+                  <h2 className="text-lg md:text-xl font-semibold text-white mb-2 md:mb-3">収入合計と人件費率</h2>
+                  <p className="text-xs md:text-sm text-white">収入合計と人件費率</p>
                 </div>
               </Link>
               

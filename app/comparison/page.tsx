@@ -3,6 +3,7 @@ import { useState, memo, useCallback } from "react";
 import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import ExcelJS from "exceljs";
 
 interface ComparisonData {
   lastYear: {
@@ -77,6 +78,8 @@ export default function Comparison() {
     thisYear: ReturnType<typeof calculateValues>;
     target: ReturnType<typeof calculateValues>;
   } | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [fileName, setFileName] = useState("");
 
   const handleInputChange = useCallback((period: keyof ComparisonData, field: string, e: React.ChangeEvent<HTMLInputElement>) => {
     setData(prev => ({
@@ -128,7 +131,7 @@ export default function Comparison() {
     const lastYear = calculateValues('lastYear');
     const thisYear = calculateValues('thisYear');
     const target = calculateValues('target');
-    
+
     setCalculatedResults({
       lastYear,
       thisYear,
@@ -164,7 +167,7 @@ export default function Comparison() {
   };
 
   const formatCurrency = (value: number) => value.toLocaleString('ja-JP', { maximumFractionDigits: 0 });
-  const formatDecimal = (value: number, decimals: number = 0) => 
+  const formatDecimal = (value: number, decimals: number = 0) =>
     value.toLocaleString('ja-JP', { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
 
   const inputFields = [
@@ -178,8 +181,8 @@ export default function Comparison() {
     { key: 'fixedCost', label: '固定費(年間・円)' },
   ];
 
-  const InputRow = memo(({ field, period, value, onInputChange }: { 
-    field: typeof inputFields[0]; 
+  const InputRow = memo(({ field, period, value, onInputChange }: {
+    field: typeof inputFields[0];
     period: keyof ComparisonData;
     value: string;
     onInputChange: (period: keyof ComparisonData, field: string, e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -219,9 +222,244 @@ export default function Comparison() {
     return ['', '', ''];
   };
 
+  const handleSaveClick = () => {
+    // 比較が実行されていない場合は保存しない
+    if (!showComparison || !calculatedResults) {
+      return;
+    }
+
+    // デフォルトファイル名を設定
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 19).replace(/[:-]/g, "").replace("T", "_");
+    setFileName(`比較データ_${dateStr}`);
+    setShowSaveModal(true);
+  };
+
+  const handleSaveComparisonData = async (customFileName?: string) => {
+    // 比較が実行されていない場合は保存しない
+    if (!showComparison || !calculatedResults) {
+      return;
+    }
+
+    // ExcelJSワークブックを作成
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("比較データ");
+
+    // 列幅の設定
+    worksheet.getColumn('A').width = 35;
+    worksheet.getColumn('B').width = 12;
+    worksheet.getColumn('C').width = 12;
+    worksheet.getColumn('D').width = 12;
+
+    // スタイル定義
+    const yellowFill = {
+      type: 'pattern' as const,
+      pattern: 'solid' as const,
+      fgColor: { argb: 'FFFF00' } // 黄色
+    };
+
+    const borderStyle = {
+      top: { style: 'thin' as const },
+      bottom: { style: 'thin' as const },
+      left: { style: 'thin' as const },
+      right: { style: 'thin' as const }
+    };
+
+    // 計算結果を取得
+    const lastYearCalc = calculatedResults.lastYear;
+    const thisYearCalc = calculatedResults.thisYear;
+    const targetCalc = calculatedResults.target;
+
+    // A1: タイトル
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = '昨年度 / 今年度 / 目標の比較 (入力→自動計算)';
+    titleCell.font = { bold: true, size: 12 };
+    worksheet.mergeCells('A1:D1');
+
+    // 入力データテーブル（行3-11）
+    // ヘッダー行（行3）
+    worksheet.getCell('A3').value = '項目';
+    worksheet.getCell('A3').border = borderStyle;
+    worksheet.getCell('B3').value = '昨年度';
+    worksheet.getCell('B3').border = borderStyle;
+    worksheet.getCell('C3').value = '今年度';
+    worksheet.getCell('C3').border = borderStyle;
+    worksheet.getCell('D3').value = '目標';
+    worksheet.getCell('D3').border = borderStyle;
+
+    // 入力データ行（行4-11）
+    inputFields.forEach((field, index) => {
+      const row = 4 + index;
+      const label = field.label;
+      const lastYearValue = formatNumber(data.lastYear[field.key as keyof typeof data.lastYear]);
+      const thisYearValue = formatNumber(data.thisYear[field.key as keyof typeof data.thisYear]);
+      const targetValue = formatNumber(data.target[field.key as keyof typeof data.target]);
+
+      // ラベル（A列）
+      worksheet.getCell(`A${row}`).value = label;
+      worksheet.getCell(`A${row}`).border = borderStyle;
+
+      // 昨年度（B列）- 白背景
+      worksheet.getCell(`B${row}`).value = lastYearValue || '';
+      worksheet.getCell(`B${row}`).border = borderStyle;
+      worksheet.getCell(`B${row}`).alignment = { horizontal: 'right' };
+      if (lastYearValue !== 0) {
+        worksheet.getCell(`B${row}`).numFmt = '#,##0';
+      }
+
+      // 今年度（C列）- 黄色背景
+      worksheet.getCell(`C${row}`).value = thisYearValue;
+      worksheet.getCell(`C${row}`).fill = yellowFill;
+      worksheet.getCell(`C${row}`).border = borderStyle;
+      worksheet.getCell(`C${row}`).alignment = { horizontal: 'right' };
+      worksheet.getCell(`C${row}`).numFmt = '#,##0';
+
+      // 目標（D列）- 黄色背景
+      worksheet.getCell(`D${row}`).value = targetValue;
+      worksheet.getCell(`D${row}`).fill = yellowFill;
+      worksheet.getCell(`D${row}`).border = borderStyle;
+      worksheet.getCell(`D${row}`).alignment = { horizontal: 'right' };
+      worksheet.getCell(`D${row}`).numFmt = '#,##0';
+    });
+
+    // 空行（行12-13）
+    // 行12と13は空のまま
+
+    // 計算結果テーブル（行14-21）
+    // タイトル（行14）
+    const resultTitleCell = worksheet.getCell('A14');
+    resultTitleCell.value = '計算結果(年間)';
+    resultTitleCell.font = { bold: true };
+    worksheet.mergeCells('A14:D14');
+
+    // ヘッダー行（行15）
+    worksheet.getCell('A15').value = '指標';
+    worksheet.getCell('A15').border = borderStyle;
+    worksheet.getCell('B15').value = '昨年度';
+    worksheet.getCell('B15').border = borderStyle;
+    worksheet.getCell('C15').value = '今年度';
+    worksheet.getCell('C15').border = borderStyle;
+    worksheet.getCell('D15').value = '目標';
+    worksheet.getCell('D15').border = borderStyle;
+
+    // 計算結果データ行（行16-21）
+    const resultRows = [
+      { row: 16, label: '貢献利益(円/人日)', lastYear: lastYearCalc.contributionProfit, thisYear: thisYearCalc.contributionProfit, target: targetCalc.contributionProfit, format: '#,##0' },
+      { row: 17, label: '基本のみ損益(円)', lastYear: lastYearCalc.basicProfitLoss, thisYear: thisYearCalc.basicProfitLoss, target: targetCalc.basicProfitLoss, format: '#,##0' },
+      { row: 18, label: '加算増収(円)', lastYear: lastYearCalc.additionRevenue, thisYear: thisYearCalc.additionRevenue, target: targetCalc.additionRevenue, format: '#,##0' },
+      { row: 19, label: '加算込み損益(円)', lastYear: lastYearCalc.totalProfitLoss, thisYear: thisYearCalc.totalProfitLoss, target: targetCalc.totalProfitLoss, format: '#,##0' },
+      { row: 20, label: '損益分岐点人数(人)', lastYear: lastYearCalc.breakEvenPoint, thisYear: thisYearCalc.breakEvenPoint, target: targetCalc.breakEvenPoint, format: '#,##0' },
+      { row: 21, label: '損益分岐点稼働率(%)', lastYear: lastYearCalc.breakEvenOperatingRate / 100, thisYear: thisYearCalc.breakEvenOperatingRate / 100, target: targetCalc.breakEvenOperatingRate / 100, format: '00.0%' },
+    ];
+
+    resultRows.forEach(({ row, label, lastYear, thisYear, target, format }) => {
+      // ラベル（A列）
+      worksheet.getCell(`A${row}`).value = label;
+      worksheet.getCell(`A${row}`).border = borderStyle;
+
+      // 昨年度（B列）
+      worksheet.getCell(`B${row}`).value = lastYear;
+      worksheet.getCell(`B${row}`).border = borderStyle;
+      worksheet.getCell(`B${row}`).alignment = { horizontal: 'right' };
+      worksheet.getCell(`B${row}`).numFmt = format;
+
+      // 今年度（C列）
+      worksheet.getCell(`C${row}`).value = thisYear;
+      worksheet.getCell(`C${row}`).border = borderStyle;
+      worksheet.getCell(`C${row}`).alignment = { horizontal: 'right' };
+      worksheet.getCell(`C${row}`).numFmt = format;
+
+      // 目標（D列）
+      worksheet.getCell(`D${row}`).value = target;
+      worksheet.getCell(`D${row}`).border = borderStyle;
+      worksheet.getCell(`D${row}`).alignment = { horizontal: 'right' };
+      worksheet.getCell(`D${row}`).numFmt = format;
+    });
+
+    // ファイル名を設定
+    const finalFileName = customFileName
+      ? (customFileName.endsWith('.xlsx') ? customFileName : `${customFileName}.xlsx`)
+      : (() => {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 19).replace(/[:-]/g, "").replace("T", "_");
+        return `比較データ_${dateStr}.xlsx`;
+      })();
+
+    // Excelファイルをダウンロード
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = finalFileName;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    setShowSaveModal(false);
+  };
+
+  const handleSaveConfirm = () => {
+    if (fileName.trim()) {
+      handleSaveComparisonData(fileName.trim());
+    } else {
+      handleSaveComparisonData();
+    }
+  };
+
   return (
     <>
       <Header />
+      {/* 保存モーダル */}
+      {showSaveModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowSaveModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-gray-800">ファイル名を入力</h2>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                ファイル名
+              </label>
+              <Input
+                type="text"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder="比較データ_20250101_120000"
+                className="w-full"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveConfirm();
+                  } else if (e.key === 'Escape') {
+                    setShowSaveModal(false);
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                .xlsx 拡張子は自動で追加されます
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setShowSaveModal(false)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleSaveConfirm}
+                className="bg-main hover:bg-blue-700 text-white"
+              >
+                保存
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="w-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 min-h-screen py-3 md:py-3 px-4 md:px-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header Card */}
@@ -232,12 +470,21 @@ export default function Comparison() {
                   <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">昨年度 / 今年度 / 目標 の比較</h1>
                   <p className="text-blue-100 text-sm md:text-base">入力→自動計算 (黄色背景のセルのみ編集可能)</p>
                 </div>
-                <Button
-                  onClick={handleComparison}
-                  className="w-full md:w-36 h-11 bg-white  hover:bg-gray-100 font-bold shadow-lg hover:shadow-xl transition-all color-main"
-                >
-                  比&nbsp;&nbsp;較
-                </Button>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <Button
+                    onClick={handleComparison}
+                    className="w-full md:w-36 h-11 bg-white  hover:bg-gray-100 font-bold shadow-lg hover:shadow-xl transition-all color-main"
+                  >
+                    比&nbsp;&nbsp;較
+                  </Button>
+                  <Button
+                    onClick={handleSaveClick}
+                    disabled={!showComparison}
+                    className="w-full md:w-36 h-11 bg-white  hover:bg-gray-100 font-bold shadow-lg hover:shadow-xl transition-all color-main disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    保&nbsp;&nbsp;管
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="p-6 md:p-8">
@@ -259,34 +506,34 @@ export default function Comparison() {
                       </tr>
                     </thead>
                     <tbody>
-                       {inputFields.map((field) => (
-                         <tr key={field.key} className="hover:bg-blue-50 transition-colors">
-                           <td className="px-3 md:px-5 md:py-2 border-b border-gray-200 bg-gray-50">
-                             <span className="text-xs md:text-sm font-semibold text-gray-700">{field.label}</span>
-                           </td>
-                           <InputRow 
-                             key={`lastYear-${field.key}`} 
-                             field={field} 
-                             period="lastYear"
-                             value={data.lastYear[field.key as keyof typeof data.lastYear]}
-                             onInputChange={handleInputChange}
-                           />
-                           <InputRow 
-                             key={`thisYear-${field.key}`} 
-                             field={field} 
-                             period="thisYear"
-                             value={data.thisYear[field.key as keyof typeof data.thisYear]}
-                             onInputChange={handleInputChange}
-                           />
-                           <InputRow 
-                             key={`target-${field.key}`} 
-                             field={field} 
-                             period="target"
-                             value={data.target[field.key as keyof typeof data.target]}
-                             onInputChange={handleInputChange}
-                           />
-                         </tr>
-                       ))}
+                      {inputFields.map((field) => (
+                        <tr key={field.key} className="hover:bg-blue-50 transition-colors">
+                          <td className="px-3 md:px-5 md:py-2 border-b border-gray-200 bg-gray-50">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">{field.label}</span>
+                          </td>
+                          <InputRow
+                            key={`lastYear-${field.key}`}
+                            field={field}
+                            period="lastYear"
+                            value={data.lastYear[field.key as keyof typeof data.lastYear]}
+                            onInputChange={handleInputChange}
+                          />
+                          <InputRow
+                            key={`thisYear-${field.key}`}
+                            field={field}
+                            period="thisYear"
+                            value={data.thisYear[field.key as keyof typeof data.thisYear]}
+                            onInputChange={handleInputChange}
+                          />
+                          <InputRow
+                            key={`target-${field.key}`}
+                            field={field}
+                            period="target"
+                            value={data.target[field.key as keyof typeof data.target]}
+                            onInputChange={handleInputChange}
+                          />
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -294,86 +541,85 @@ export default function Comparison() {
 
               {/* Calculation Results Section */}
               {showComparison && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-main">
-                  <div className="w-1 h-6 bg-main rounded-full"></div>
-                  <h2 className="text-lg md:text-xl font-bold text-gray-800">計算結果 (年間)</h2>
+                <div>
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-main">
+                    <div className="w-1 h-6 bg-main rounded-full"></div>
+                    <h2 className="text-lg md:text-xl font-bold text-gray-800">計算結果 (年間)</h2>
+                  </div>
+                  <div className="overflow-x-auto border-2 border-gray-300 rounded-xl shadow-lg mb-4">
+                    <table className="w-full bg-white min-w-[600px]">
+                      <thead className="bg-main">
+                        <tr>
+                          <th className="px-4 md:px-6 py-2 md:py-2 text-left text-sm md:text-base font-bold text-white border-r border-gray-200">指標</th>
+                          <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">昨年度</th>
+                          <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">今年度</th>
+                          <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">目標</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="hover:bg-green-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200 bg-gray-50">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">貢献利益(円/人日)</span>
+                          </td>
+                          {formatResultValue('contributionProfit', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
+                            <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold text-gray-800 bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
+                          ))}
+                        </tr>
+                        <tr className="hover:bg-blue-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">基本のみ損益(円)</span>
+                          </td>
+                          {formatResultValue('basicProfitLoss', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
+                            <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
+                          ))}
+                        </tr>
+                        <tr className="hover:bg-purple-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">加算増収(円)</span>
+                          </td>
+                          {formatResultValue('additionRevenue', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
+                            <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
+                          ))}
+                        </tr>
+                        <tr className="hover:bg-emerald-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">加算込み損益(円)</span>
+                          </td>
+                          {[lastYearCalc, thisYearCalc, targetCalc].map((calc, idx) => {
+                            const isPositive = calc.totalProfitLoss >= 0;
+                            return (
+                              <td key={idx} className={`px-3 md:px-5 py-2 md:py-2 text-right text-sm md:text-base font-extrabold border-b border-gray-200 border-r border-gray-200 last:border-r-0 ${isPositive ? 'color-main' : 'text-red-700'
+                                }`}>
+                                {formatCurrency(calc.totalProfitLoss)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        <tr className="hover:bg-orange-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">損益分岐点人数(人)</span>
+                          </td>
+                          {formatResultValue('breakEvenPoint', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
+                            <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
+                          ))}
+                        </tr>
+                        <tr className="hover:bg-red-50 transition-colors">
+                          <td className="px-3 md:px-5 py-2 md:py-2">
+                            <span className="text-xs md:text-sm font-semibold text-gray-700">損益分岐点稼働率(%)</span>
+                          </td>
+                          {formatResultValue('breakEvenOperatingRate', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
+                            <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-r border-gray-200 last:border-r-0">{val}</td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="border-l-4 border-main text-main rounded-lg p-4 shadow-sm">
+                    <p className="text-xs md:text-sm text-gray-700 font-medium">
+                      <span className="font-bold">※</span> 『加算込み損益』=『基本のみ損益』+『加算増収』
+                    </p>
+                  </div>
                 </div>
-                <div className="overflow-x-auto border-2 border-gray-300 rounded-xl shadow-lg mb-4">
-                  <table className="w-full bg-white min-w-[600px]">
-                    <thead className="bg-main">
-                      <tr>
-                        <th className="px-4 md:px-6 py-2 md:py-2 text-left text-sm md:text-base font-bold text-white border-r border-gray-200">指標</th>
-                        <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">昨年度</th>
-                        <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">今年度</th>
-                        <th className="px-4 md:px-6 py-2 md:py-2 text-center text-sm md:text-base font-bold text-white border-r border-gray-200">目標</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="hover:bg-green-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200 bg-gray-50">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">貢献利益(円/人日)</span>
-                        </td>
-                        {formatResultValue('contributionProfit', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
-                          <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold text-gray-800 bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
-                        ))}
-                      </tr>
-                      <tr className="hover:bg-blue-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">基本のみ損益(円)</span>
-                        </td>
-                        {formatResultValue('basicProfitLoss', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
-                          <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
-                        ))}
-                      </tr>
-                      <tr className="hover:bg-purple-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">加算増収(円)</span>
-                        </td>
-                        {formatResultValue('additionRevenue', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
-                          <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
-                        ))}
-                      </tr>
-                      <tr className="hover:bg-emerald-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">加算込み損益(円)</span>
-                        </td>
-                        {[lastYearCalc, thisYearCalc, targetCalc].map((calc, idx) => {
-                          const isPositive = calc.totalProfitLoss >= 0;
-                          return (
-                            <td key={idx} className={`px-3 md:px-5 py-2 md:py-2 text-right text-sm md:text-base font-extrabold border-b border-gray-200 border-r border-gray-200 last:border-r-0 ${
-                              isPositive ? 'color-main' : 'text-red-700'
-                            }`}>
-                              {formatCurrency(calc.totalProfitLoss)}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                      <tr className="hover:bg-orange-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2 border-b border-gray-200">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">損益分岐点人数(人)</span>
-                        </td>
-                        {formatResultValue('breakEvenPoint', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
-                          <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-b border-gray-200 border-r border-gray-200 last:border-r-0">{val}</td>
-                        ))}
-                      </tr>
-                      <tr className="hover:bg-red-50 transition-colors">
-                        <td className="px-3 md:px-5 py-2 md:py-2">
-                          <span className="text-xs md:text-sm font-semibold text-gray-700">損益分岐点稼働率(%)</span>
-                        </td>
-                        {formatResultValue('breakEvenOperatingRate', lastYearCalc, thisYearCalc, targetCalc).map((val, idx) => (
-                          <td key={idx} className="px-3 md:px-5 py-2 md:py-2 text-right text-xs md:text-sm font-bold bg-white border-r border-gray-200 last:border-r-0">{val}</td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="border-l-4 border-main text-main rounded-lg p-4 shadow-sm">
-                  <p className="text-xs md:text-sm text-gray-700 font-medium">
-                    <span className="font-bold">※</span> 『加算込み損益』=『基本のみ損益』+『加算増収』
-                  </p>
-                </div>
-              </div>
               )}
             </div>
           </div>

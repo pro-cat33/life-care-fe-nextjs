@@ -19,9 +19,10 @@ export function useServiceData(
   count: number,
   keyword: string,
   service: number,
-  member_num: number,
+  member_num: string,
   work_time: number,
   category: number,
+  type: string
 ): UseServiceDataResult {
   const [data, setData] = useState<ServiceData[]>([]);
   const [total, setTotal] = useState(0);
@@ -53,6 +54,7 @@ export function useServiceData(
             member: member_num,
             time: work_time,
             category,
+            type
           },
           signal: controller.signal,
         });

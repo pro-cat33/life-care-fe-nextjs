@@ -20,7 +20,7 @@ export default function Home() {
     currentPage,
     itemsPerPage,
     keyword,
-    service, member_num, work_time, category,
+    service, member_num , work_time, category, ""
   );
 
   const totalPages = total > 0 ? Math.ceil(total / itemsPerPage) : 1;

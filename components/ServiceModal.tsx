@@ -25,11 +25,13 @@ export default function ServiceModal({ modal, onClose, onSave, selectedServices 
     keyword, service, category, work_time, member_num,
   } = useAppContext();
 
+  let type = modal.id == "addition" ? "addition" : "init";
+
   const { data, total, isLoading } = useServiceData(
     currentPage,
     itemsPerPage,
     keyword,
-    service, member_num, work_time, category,
+    service, member_num, work_time, category, type
   );
 
   const totalPages = total > 0 ? Math.ceil(total / itemsPerPage) : 1;

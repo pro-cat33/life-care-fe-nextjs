@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from 'react';
 
 import {
   Select,
@@ -9,44 +10,89 @@ import {
 } from '@/components/ui/select';
 
 interface MemberNumSelectorProps {
-  value: number;
-  onChange: (value: number) => void;
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function MemberNumSelector({ value, onChange }: MemberNumSelectorProps) {
-  const options = [
-    { index: 0, label: "定員数"},
-    { index: 1, label: ""},
-    { index: 2, label: "定員５人以下" },
-    { index: 3, label: "定員10人以下"},
-    { index: 4, label: "定員６人以上１０人以下" },
-    { index: 5, label: "定員11人以上20人以下"},
-    { index: 6, label: "定員１１人以上２０人以下" },
-    { index: 7, label: "定員21人以上" },
-    { index: 8, label: "定員２１人以上３０人以下" },
-    { index: 9, label: "定員２１人以上４０人以下" },
-    { index: 10, label: "定員３１人以上４０人以下" },
-    { index: 11, label: "定員４１人以上５０人以下" },
-    { index: 12, label: "定員４１人以上６０人以下" },
-    { index: 13, label: "定員５１人以上６０人以下" },
-    { index: 14, label: "定員６１人以上７０人以下" },
-    { index: 15, label: "定員６１人以上８０人以下" },
-    { index: 16, label: "定員７１人以上８０人以下" },
-    { index: 17, label: "定員８１人以上" }
+  const [min_member, setMinMember] = useState<{ index: number, label: string }[]>([]);
+  const [max_member, setMaxMember] = useState<{ index: number, label: string }[]>([]);
+  const [min_val, setMinVal] = useState<number>(0);
+  const [max_val, setMaxVal] = useState<number>(0);
+  const [cur_max, setCurMax] = useState<number>(0);
+
+  const options1 = [
+    { index: 0, label: "・・・" },
+    { index: 1, label: "定員１１人以上" },
+    { index: 2, label: "定員２１人以上" },
+    { index: 3, label: "定員３１人以上" },
+    { index: 4, label: "定員４１人以上" },
+    { index: 5, label: "定員５１人以上" },
+    { index: 6, label: "定員６１人以上" },
+    { index: 7, label: "定員７１人以上" },
+    { index: 8, label: "定員８１人以上" }
   ];
+
+  const options2 = [
+    { index: 0, label: "・・・" },
+    { index: 1, label: "定員１０人以下" },
+    { index: 2, label: "定員２０人以下" },
+    { index: 3, label: "定員３０人以下" },
+    { index: 4, label: "定員４０人以下" },
+    { index: 5, label: "定員５０人以下" },
+    { index: 6, label: "定員６０人以下" },
+    { index: 7, label: "定員７０人以下" },
+    { index: 8, label: "定員８０人以下" },
+  ];
+
+  const onMinMemberChange = (value: number) => {
+    setMinVal(value);
+    setCurMax(0);
+    setMaxVal(0);
+  }
+
+  const onMaxMemberChange = (value: number) => {
+    setMaxVal(value);
+    setCurMax(value);
+  }
+
+  useEffect(() => {
+    if (min_val == 0 && max_val == 0) {
+      setMinMember(options1);
+      setMaxMember(options2);
+    } else {
+      setMaxMember(options2.slice(min_val + 1, options2.length));
+    }
+    onChange(`${min_val}_${cur_max}`);
+  }, [min_val, max_val]);
 
   return (
     <div className="flex items-center gap-2">
       <Select
-        value={value.toString()}
-        onValueChange={(val) => onChange(Number(val))}
+        value={min_val.toString()}
+        onValueChange={(val) => onMinMemberChange(Number(val))}
       >
         <SelectTrigger className="w-40 md:w-60 text-xs md:text-sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={"time"+option.index} value={option.index.toString()}>
+          {min_member.map((option) => (
+            <SelectItem key={"member_min" + (option.index)} value={option.index.toString()}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={cur_max.toString()}
+        onValueChange={(val) => onMaxMemberChange(Number(val))}
+      >
+        <SelectTrigger className="w-40 md:w-60 text-xs md:text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {max_member.map((option) => (
+            <SelectItem key={"member_max" + option.index.toString()} value={option.index.toString()}>
               {option.label}
             </SelectItem>
           ))}

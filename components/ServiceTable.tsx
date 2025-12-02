@@ -1,5 +1,4 @@
 "use client";
-import { ServiceData } from '@/types/service';
 import {
   Table,
   TableBody,
@@ -8,6 +7,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { ServiceData } from '@/types/service';
+import Link from 'next/link';
 import { ChangeEvent } from 'react';
 import { Input } from './ui/input';
 
@@ -30,6 +32,7 @@ export function ServiceTable({
   wrapperClassName,
   bodyMaxHeight,
 }: ServiceTableProps) {
+  const { user } = useAuthContext();
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -71,18 +74,18 @@ export function ServiceTable({
         <Table className="min-w-[800px]">
           <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-main">
-            {isCheckboxMode && (
-              <TableHead className="text-center text-xs md:text-sm"></TableHead>
-            )}
-            <TableHead className="text-center text-xs md:text-sm">種  類</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">項  目</TableHead>
-            <TableHead className="text-xs md:text-sm">サービス内容略称</TableHead>
-            <TableHead className="text-xs md:text-sm">勤 務 時 間</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">定 員 数</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">区  分</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">基  準</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">合  成<br />単位数</TableHead>
-            <TableHead className="text-center text-xs md:text-sm">算定単位</TableHead>
+              {isCheckboxMode && (
+                <TableHead className="text-center text-xs md:text-sm"></TableHead>
+              )}
+              <TableHead className="text-center text-xs md:text-sm">種  類</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">項  目</TableHead>
+              <TableHead className="text-xs md:text-sm">サービス内容略称</TableHead>
+              <TableHead className="text-xs md:text-sm">営 業 時 間</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">定 員 数</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">区  分</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">基  準<br />単位数</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">合  成<br />単位数</TableHead>
+              <TableHead className="text-center text-xs md:text-sm">算定単位</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,32 +93,38 @@ export function ServiceTable({
               const checked = isSelected(item.id);
               return (
                 <TableRow key={item.id || index} className="hover:bg-gray-50">
-                {isCheckboxMode && (
+                  {isCheckboxMode && (
+                    <TableCell className="text-center text-xs md:text-sm">
+                      <Input
+                        type="checkbox"
+                        id={item.id.toString()}
+                        checked={checked}
+                        onChange={handleCheckboxChange(item)}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell className="text-center text-xs md:text-sm">{item.service_kind}</TableCell>
                   <TableCell className="text-center text-xs md:text-sm">
-                    <Input
-                      type="checkbox"
-                      id={item.id.toString()}
-                      checked={checked}
-                      onChange={handleCheckboxChange(item)}
-                    />
+                    {modal.id !== '' || user?.role !== "admin" ? (
+                      <span className="color-main">{item.service_id}</span>
+                    ) : (
+                      <Link href={`/service/${item.service_kind}${item.service_id}`}>
+                        <span className="color-main hover:underline cursor-pointer ">{item.service_id}</span>
+                      </Link>
+                    )}
                   </TableCell>
-                )}
-                <TableCell className="text-center text-xs md:text-sm">{item.service_kind}</TableCell>
-                <TableCell className="text-center text-xs md:text-sm">
-                  <span className="color-main">{item.service_id}</span>
-                </TableCell>
-                <TableCell className="text-xs md:text-sm">{item.short_content}</TableCell>
-                <TableCell className="text-xs md:text-sm">{item.work_time}</TableCell>
-                <TableCell className="text-center text-xs md:text-sm">
-                  <span className="color-main">{item.member_num}</span>
-                </TableCell>
-                <TableCell className="text-center text-xs md:text-sm">{item.category}</TableCell>
-                <TableCell className="text-center text-xs md:text-sm">{item.default_price}</TableCell>
-                <TableCell className="text-center text-xs md:text-sm">{item.price}</TableCell>
-                <TableCell className="text-center text-xs md:text-sm">{item.unit}</TableCell>
-              </TableRow>
-            )
-          })}
+                  <TableCell className="text-xs md:text-sm">{item.short_content}</TableCell>
+                  <TableCell className="text-xs md:text-sm">{item.work_time.includes("時間") ? item.work_time : ""}</TableCell>
+                  <TableCell className="text-center text-xs md:text-sm">
+                    <span className="color-main">{item.member_num}</span>
+                  </TableCell>
+                  <TableCell className="text-center text-xs md:text-sm">{item.category}</TableCell>
+                  <TableCell className="text-center text-xs md:text-sm">{item.default_price}</TableCell>
+                  <TableCell className="text-center text-xs md:text-sm">{item.price}</TableCell>
+                  <TableCell className="text-center text-xs md:text-sm">{item.unit}</TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

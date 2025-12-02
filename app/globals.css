@@ -81,3 +81,7 @@ button {
     transform: rotate(360deg);
   }
 }
+
+.flex-auto {
+  flex: 0 auto;
+}

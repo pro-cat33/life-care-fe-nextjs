@@ -12,9 +12,10 @@ const Header = () => {
 
   const navItems = [
     {href: "/home", label: "ホームページ"},
-    { href: "/init", label: "基本設定" },
-    { href: "/calculate", label: "損益分岐点と加算効果" },
-    { href: "/comparison", label: "比較（入力→自動計算）" },
+    { href: "/revenue", label: "収入合計と人件費率" },
+    // { href: "/init", label: "基本設定" },
+    // { href: "/calculate", label: "損益分岐点と加算効果" },
+    // { href: "/comparison", label: "比較（入力→自動計算）" },
     { href: "/service", label: "厚生労働省" },
   ];
 
